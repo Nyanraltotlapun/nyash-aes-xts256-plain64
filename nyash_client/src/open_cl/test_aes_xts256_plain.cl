@@ -27,7 +27,7 @@ __kernel void encrypt_data(__global const ulong* g_Ti, __global const uint* g_Tj
   uint d_ks[44];
   uint t_ks[44];
   uint tweak[4];
-  uint enc_key[8];
+  uint enc_key[8];add_uint_to_bigint4_
   uint u_data[4];
   uint enc_data[4] = { 0 };
 

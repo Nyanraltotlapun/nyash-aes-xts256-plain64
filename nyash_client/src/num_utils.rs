@@ -158,7 +158,7 @@ mod num_utils_tests {
             .build(&cl_context)
             .unwrap();
         let cl_queue = Queue::new(&cl_context, cl_device, None).unwrap();
-
+        
         let cl_buffer_num = Buffer::<u32>::builder()
             .queue(cl_queue.clone())
             .flags(flags::MEM_READ_ONLY)
