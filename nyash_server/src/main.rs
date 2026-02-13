@@ -3,10 +3,9 @@ mod num_utils;
 mod database;
 
 
-
-
-
-
+fn read_config() -> (){
+    
+}
 
 fn main() {
     println!("Hello, world!");
@@ -23,6 +22,9 @@ fn main() {
     let e = a1.min(u32::MAX);
     println!("e = {}",e);
 
+    for i in 0..=u16::MAX {
+        println!("{}", i);
+    }
 
 }
 

@@ -1,10 +1,10 @@
-use crate::num_utils;
-use rand::{self, Rng, distr::weighted::Weight};
+
+use rand::{self, Rng};
 use redb::{
-    Database, Key, MultimapTableDefinition, ReadableDatabase, ReadableMultimapTable, ReadableTable, ReadableTableMetadata, TableDefinition
+    Database, ReadableDatabase, ReadableTable, ReadableTableMetadata, TableDefinition
 };
 // use std::collections::HashMap;
-use std::{ops::Not, u64, u128};
+use std::{ops::Not,path::Path, u64, u128};
 
 //tables defenition
 const DB_FILE: &str = "./data";
@@ -344,7 +344,7 @@ impl<'a> RangesTable<'a> {
 
 }
 
-fn db_create_job(db: Database, pref_job_size: u64) -> Result<Option<JobRecord>, redb::Error> {
+fn db_create_job(db: &Database, pref_job_size: u64) -> Result<Option<JobRecord>, redb::Error> {
     let transct = db.begin_write()?;
 
     // 1. look for abandonent jobs
@@ -410,7 +410,7 @@ fn db_create_job(db: Database, pref_job_size: u64) -> Result<Option<JobRecord>, 
 
 
 // returns false if no such job found in DB
-fn db_commit_job(db: Database, job_id: u64) -> Result<bool, redb::Error> {
+fn db_commit_job(db: &Database, job_id: u64) -> Result<bool, redb::Error> {
     let transct: redb::WriteTransaction = db.begin_write()?;
 
     let job_found = {
@@ -444,7 +444,7 @@ fn db_commit_job(db: Database, job_id: u64) -> Result<bool, redb::Error> {
 }
 
 
-fn db_get_progress(db: Database) -> Result<f64, redb::Error> {
+fn db_get_progress(db: &Database) -> Result<f64, redb::Error> {
     let trx: redb::ReadTransaction = db.begin_read()?;
     let progress = {
         let ranges_t = trx.open_table(RANGES)?;
@@ -459,5 +459,38 @@ fn db_get_progress(db: Database) -> Result<f64, redb::Error> {
     };
     trx.close()?;
     return Ok(progress);
+}
+
+
+fn db_init(db: &Database) -> Result<(), redb::Error> {
+    let transct: redb::WriteTransaction = db.begin_write()?;
+    {
+        let ranges = transct.open_table(RANGES)?;
+        let ranges_to_use = transct.open_table(RANGES_TO_USE)?;
+
+        // create new ranges
+        for r_id in 0..=u16::MAX {
+            let r = RangeRecord::new(id);
+            ranges.insert(r_id, r.value())?;
+            ranges_to_use.insert(r_id, ())?;
+        }
+    }
+    transct.commit()?;
+    Ok(())
+}
+
+fn db_open(db_file_path: &Path) -> Result<Database, redb::Error> {
+    let db = Database::create(db_file_path)?;
+    let trx = db.begin_read()?;
+    let ranges_len = {
+        let ranges_table = trx.open_table(RANGES)?;
+        ranges_table.len()?
+    };
+    trx.close()?;
+    if ranges_len == 0 {
+        db_init(&db)?;
+    }
+
+    Ok(db)
 }
 
