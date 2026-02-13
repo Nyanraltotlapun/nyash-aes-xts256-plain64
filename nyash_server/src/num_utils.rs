@@ -111,8 +111,6 @@ fn bignum_to_hex(a: &[u32; 8]) -> String {
 
 #[cfg(test)]
 mod num_utils_tests {
-    use std::io::Read;
-
     use super::*;
 
     #[test]

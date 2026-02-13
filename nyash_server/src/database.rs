@@ -465,12 +465,12 @@ fn db_get_progress(db: &Database) -> Result<f64, redb::Error> {
 fn db_init(db: &Database) -> Result<(), redb::Error> {
     let transct: redb::WriteTransaction = db.begin_write()?;
     {
-        let ranges = transct.open_table(RANGES)?;
-        let ranges_to_use = transct.open_table(RANGES_TO_USE)?;
+        let mut ranges = transct.open_table(RANGES)?;
+        let mut ranges_to_use = transct.open_table(RANGES_TO_USE)?;
 
         // create new ranges
         for r_id in 0..=u16::MAX {
-            let r = RangeRecord::new(id);
+            let r = RangeRecord::new(r_id);
             ranges.insert(r_id, r.value())?;
             ranges_to_use.insert(r_id, ())?;
         }
