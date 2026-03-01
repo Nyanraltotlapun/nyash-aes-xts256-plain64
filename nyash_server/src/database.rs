@@ -4,7 +4,7 @@ use redb::{
     Database, ReadableDatabase, ReadableTable, ReadableTableMetadata, TableDefinition
 };
 // use std::collections::HashMap;
-use std::{ops::Not,path::Path, u64, u128};
+use std::{ops::Not, path::Path, u64, u128};
 
 //tables defenition
 const DB_FILE: &str = "./data";
@@ -24,13 +24,13 @@ fn get_timestump() -> u64 {
 }
 
 #[derive(Copy, Clone, Debug)]
-struct JobRecord {
-    id: u64,
-    range_id: u16,
-    tweak_key: u128,
-    start_key: u128,
-    len: u64,
-    start_time: u64,
+pub struct JobRecord {
+    pub id: u64,
+    pub range_id: u16,
+    pub tweak_key: u128,
+    pub start_key: u128,
+    pub len: u64,
+    pub start_time: u64,
 }
 
 impl JobRecord {
@@ -344,7 +344,7 @@ impl<'a> RangesTable<'a> {
 
 }
 
-fn db_create_job(db: &Database, pref_job_size: u64) -> Result<Option<JobRecord>, redb::Error> {
+pub fn db_create_job(db: &Database, pref_job_size: u64) -> Result<Option<JobRecord>, redb::Error> {
     let transct = db.begin_write()?;
 
     // 1. look for abandonent jobs
@@ -410,7 +410,7 @@ fn db_create_job(db: &Database, pref_job_size: u64) -> Result<Option<JobRecord>,
 
 
 // returns false if no such job found in DB
-fn db_commit_job(db: &Database, job_id: u64) -> Result<bool, redb::Error> {
+pub fn db_commit_job(db: &Database, job_id: u64) -> Result<bool, redb::Error> {
     let transct: redb::WriteTransaction = db.begin_write()?;
 
     let job_found = {
@@ -444,7 +444,7 @@ fn db_commit_job(db: &Database, job_id: u64) -> Result<bool, redb::Error> {
 }
 
 
-fn db_get_progress(db: &Database) -> Result<f64, redb::Error> {
+pub fn db_get_progress(db: &Database) -> Result<f64, redb::Error> {
     let trx: redb::ReadTransaction = db.begin_read()?;
     let progress = {
         let ranges_t = trx.open_table(RANGES)?;
@@ -479,7 +479,7 @@ fn db_init(db: &Database) -> Result<(), redb::Error> {
     Ok(())
 }
 
-fn db_open(db_file_path: &Path) -> Result<Database, redb::Error> {
+pub fn db_open(db_file_path: &Path) -> Result<Database, redb::Error> {
     let db = Database::create(db_file_path)?;
     let trx = db.begin_read()?;
     let ranges_len = {
