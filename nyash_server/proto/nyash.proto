@@ -1,0 +1,83 @@
+syntax = "proto3";
+package nyash_server;
+
+service NyashLuks {
+    // Requesting work, gettin in response work data, error, or message that there is no work currently awaylable.
+    rpc RequestWork (WorkRequest) returns (WorkReply);
+    // Commiting work, with work ID. If key was found, sending also discowered key
+    rpc CommitWork (WorkCommit) returns (CommitReply);
+    // Request owerall key search progress
+    rpc RequestProgress (ProgressRequest) returns (ProgressReply);
+}
+
+message WorkRequest {
+    // Request work from server
+    // Preffered work size in number of keys
+    uint64 pref_work_size = 1;
+}
+
+message WorkReply {
+    oneof result {
+        WorkData work_data = 1;
+        bool no_work = 2;
+        string error = 3;
+    }
+}
+
+message WorkData {
+    // work id
+    uint64 work_id =1;
+    // work size - number of keys to check
+    uint64 work_size= 2;
+    // tweak key is 128 bit. We send it as two uint64 values
+    uint64 tweak_key0 =3;
+    uint64 tweak_key1 =4;
+    // start key is 128 bit. We send it as two uint64 values
+    uint64 start_key0 =5;
+    uint64 start_key1 =6;
+}
+
+message WorkCommit {
+    // work id
+    uint64 work_id =1;
+    oneof result {
+        bool no_key = 2;
+        KeyData found_key = 3;
+    }
+
+}
+
+message KeyData {
+    // tweak key is 128 bit. We send it as two uint64 values
+    uint64 tweak_key0 =3;
+    uint64 tweak_key1 =4;
+    // start key is 128 bit. We send it as two uint64 values
+    uint64 start_key0 =5;
+    uint64 start_key1 =6;
+}
+
+
+message CommitReply {
+    // Status code 
+    // 0 - means ok
+    // 1 - something went wrong on server
+    // 2 - something wrong with request
+    uint32 status_code = 1;
+    // Brutforce progress as ratio from 0 to 1(completed)
+    double progress = 2;
+}
+
+// request total progress
+message ProgressRequest {
+  
+}
+
+message ProgressReply {
+    // Status code 
+    // 0 - means ok
+    // 1 - something went wrong on server
+    // 2 - something wrong with request
+    uint32 status_code = 1;
+    // Brutforce progress as ratio from 0 to 1(completed)
+    double progress = 2;
+}

@@ -13,6 +13,16 @@ fn u128_to_u32arr(a: u128) -> [u32;4] {
     return res;
 }
 
+pub fn u128_to_u64arr(a: u128) -> [u64;2] {
+    let mut res = [0u64;2];
+    let a_bytes = a.to_le_bytes();
+    let chunks = a_bytes.as_chunks::<8>().0;
+    for i in 0..2 {
+        res[i] = u64::from_le_bytes(chunks[i]);
+    }
+    return res;
+}
+
 pub fn add_u128_to_u256(a: &[u32; 8], b: u128) -> ([u32; 8], bool) {
     let mut res: [u32; 8] = [0; 8];
     let mut carry = false;

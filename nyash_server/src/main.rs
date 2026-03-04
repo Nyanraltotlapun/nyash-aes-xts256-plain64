@@ -89,6 +89,7 @@ impl NyashWorkDone {
 enum NyashReq {
     NyashWorkRequest(NyashWorkRequest),
     NyashWorkDone(NyashWorkDone),
+    StatsRequest,
 }
 
 
@@ -174,9 +175,6 @@ impl NyashNoWorkResp {
     }
 }
 
-
-
-
 enum NyashResp {
     NyashWorkResp(NyashWorkResp),
     NyashErrorResp(NyashErrorResp),
@@ -188,6 +186,7 @@ fn parse_message(mut it: std::str::Split<'_, &str>) -> Result<NyashReq, Protocol
     match code {
         NyashWorkRequest::HEADER => Ok(NyashReq::NyashWorkRequest(NyashWorkRequest::from_msg(it)?)),
         NyashWorkDone::HEADER => Ok(NyashReq::NyashWorkDone(NyashWorkDone::from_msg(it)?)),
+        "STATS" => Ok(NyashReq::StatsRequest),
         _ => Err(ProtocolParseError::WrongFormat(0))
     }
 }
@@ -255,6 +254,9 @@ async fn handle_connection(stream: TcpStream, db: &redb::Database) {
                             }
                         }
                     },
+                    Ok(NyashReq::StatsRequest) => {
+
+                    },
                     Err(ex) => println!("Error sending message: {:?}", ex)
                 }
                 
@@ -271,6 +273,7 @@ async fn handle_connection(stream: TcpStream, db: &redb::Database) {
 
 
 async fn accept_loop(listener: TcpListener, db: redb::Database) {
+    
     while let Ok((stream, _)) = listener.accept().await {
         // Spawn a new task for each connection
         handle_connection(stream, &db).await;

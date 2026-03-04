@@ -3,13 +3,26 @@ name = "nyash_server"
 version = "0.1.0"
 edition = "2024"
 
+
+[[bin]] # Bin to run the HelloWorld gRPC server
+name = "nyash_server"
+path = "src/server.rs"
+
+
 [dependencies]
 clap = { version = "4.5.58", features = ["derive"] }
 futures = "0.3.32"
 log = "0.4.29"
+prost = "0.14.3"
 rand = "0.9.2"
 redb = "3.1.0"
 serde = { version = "1.0.228", features = ["derive"] }
 tokio = { version = "1.49.0", features = ["full"] }
 tokio-tungstenite = "0.28.0"
 toml = "1.0.1"
+tonic = "0.14.5"
+tonic-prost = "0.14.5"
+
+
+[build-dependencies]
+tonic-prost-build = "*"
