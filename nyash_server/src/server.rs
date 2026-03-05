@@ -31,6 +31,7 @@ fn work_rec_to_work_data(work_rec: database::JobRecord) -> WorkData {
 #[derive(Debug, Default)]
 pub struct NyashService {
     db: redb::Database,
+    progress: f64,
 }
 
 #[tonic::async_trait]
@@ -63,7 +64,15 @@ impl NyashLuks for NyashService {
     async fn commit_work(&self, request: Request<WorkCommit>) -> Result<Response<CommitReply>, Status> {
         println!("Got a request: {:?}", request);
         let work_id: u64 = request.into_inner().work_id;
-        
+        match database::db_commit_job(&self.db, work_id) {
+            Ok(true) => Ok(Response::new(CommitReply {status_code: 0, progress: self.progress})),
+            Ok(false) => Ok(Response::new(CommitReply {status_code: 1, progress: self.progress})),
+            Err(_) => Err(Status::internal("DB error"))
+        }
+    }
+
+    async fn request_progress(&self, _request: Request<ProgressRequest>) -> Result<Response<ProgressReply>, Status> {
+        Ok(Response::new(ProgressReply {progress: self.progress}))
     }
 }
 

@@ -17,6 +17,8 @@ const COMPLETED_RANGES: TableDefinition<u128, u128> = TableDefinition::new("comp
 const JOBS_TABLE: TableDefinition<u64, (u16, u128, u128, u64, u64)> = TableDefinition::new("jobs");
 const JOBS_FREE_IDS: TableDefinition<u64, ()> = TableDefinition::new("jobs_free_ids");
 
+const FOUND_KEYS_TABLE: TableDefinition<(u128, u128), u64> = TableDefinition::new("found_keys");
+
 // get time is seconds
 fn get_timestump() -> u64 {
     use std::time::{SystemTime, UNIX_EPOCH};
@@ -443,6 +445,45 @@ pub fn db_commit_job(db: &Database, job_id: u64) -> Result<bool, redb::Error> {
     return Ok(job_found); // Job already done by someone else
 }
 
+
+#[derive(Copy, Clone, Debug)]
+pub struct FoundKey {
+    pub tweak_key: u128,
+    pub enc_key: u128,
+    pub timestump: u64
+}
+pub fn db_get_found_keys(db: &Database) -> Result<Vec<FoundKey>, redb::Error> {
+    let trx: redb::ReadTransaction = db.begin_read()?;
+    let mut res:Vec<FoundKey> = Vec::new();
+
+    {
+        let found_keys_t = trx.open_table(FOUND_KEYS_TABLE)?;
+        
+        for found_key_res in found_keys_t.iter()? {
+            let ag = found_key_res?;
+            res.push(FoundKey{
+                tweak_key: ag.0.value().0,
+                enc_key: ag.0.value().1,
+                timestump: ag.1.value(),
+            });
+        }
+    }
+    
+    return Ok(res);
+}
+
+pub fn db_put_found_key(db: &Database, tw_k: u128, en_k: u128) -> Result<u64, redb::Error> {
+    
+    let trx: redb::WriteTransaction = db.begin_write()?;
+    let new_keys_count = {
+        let mut found_keys_t = trx.open_table(FOUND_KEYS_TABLE)?;
+        found_keys_t.insert((tw_k,en_k), get_timestump());
+        found_keys_t.len()?
+    };
+    trx.commit();
+
+    return Ok(new_keys_count);
+}
 
 pub fn db_get_progress(db: &Database) -> Result<f64, redb::Error> {
     let trx: redb::ReadTransaction = db.begin_read()?;

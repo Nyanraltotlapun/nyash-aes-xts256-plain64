@@ -3,6 +3,8 @@
 //     i: [u32; 2],
 // }
 
+use prost::bytes::BufMut;
+
 fn u128_to_u32arr(a: u128) -> [u32;4] {
     let mut res = [0u32;4];
     let a_bytes = a.to_le_bytes();
@@ -21,6 +23,14 @@ pub fn u128_to_u64arr(a: u128) -> [u64;2] {
         res[i] = u64::from_le_bytes(chunks[i]);
     }
     return res;
+}
+
+pub fn u64arr_to_u128(a:(u64,u64)) -> u128 {
+    let mut bytes_data: [u8; 16] = [0u8;16];
+    bytes_data[0..8].copy_from_slice(a.0.to_le_bytes().as_slice());
+    bytes_data[8..].copy_from_slice(a.1.to_le_bytes().as_slice());
+
+    return u128::from_le_bytes(bytes_data);
 }
 
 pub fn add_u128_to_u256(a: &[u32; 8], b: u128) -> ([u32; 8], bool) {

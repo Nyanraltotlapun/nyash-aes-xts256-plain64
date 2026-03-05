@@ -73,11 +73,6 @@ message ProgressRequest {
 }
 
 message ProgressReply {
-    // Status code 
-    // 0 - means ok
-    // 1 - something went wrong on server
-    // 2 - something wrong with request
-    uint32 status_code = 1;
     // Brutforce progress as ratio from 0 to 1(completed)
     double progress = 2;
 }
