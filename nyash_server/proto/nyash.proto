@@ -1,5 +1,5 @@
 syntax = "proto3";
-package nyash_server;
+package nyash_proto;
 
 service NyashLuks {
     // Requesting work, gettin in response work data, error, or message that there is no work currently awaylable.
@@ -74,5 +74,6 @@ message ProgressRequest {
 
 message ProgressReply {
     // Brutforce progress as ratio from 0 to 1(completed)
+    bool key_found = 1;
     double progress = 2;
 }
