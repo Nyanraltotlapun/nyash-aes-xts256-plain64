@@ -3,7 +3,6 @@
 //     i: [u32; 2],
 // }
 
-use prost::bytes::BufMut;
 
 fn u128_to_u32arr(a: u128) -> [u32;4] {
     let mut res = [0u32;4];

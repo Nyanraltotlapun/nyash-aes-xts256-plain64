@@ -1,6 +1,7 @@
 syntax = "proto3";
 package nyash_proto;
 
+// serving key brutforcing for aes xts 
 service NyashLuks {
     // Requesting work, gettin in response work data, error, or message that there is no work currently awaylable.
     rpc RequestWork (WorkRequest) returns (WorkReply);

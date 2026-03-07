@@ -1,15 +1,12 @@
-use std::ops::DerefMut;
 use std::str::FromStr;
-use std::sync::atomic::AtomicBool;
 use std::{path::PathBuf};
 
 
 use redb;
 use clap::Parser;
 
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc};
 use tokio::sync::RwLock as AsyncRwLock;
-use tokio::time::{interval, Duration};
 
 use tonic::{Request, Response, Status, transport::Server};
 
@@ -20,7 +17,7 @@ pub mod nyash_proto {
 
 use nyash_proto::nyash_luks_server::{NyashLuks, NyashLuksServer};
 use nyash_proto::{
-    CommitReply, KeyData, ProgressReply, ProgressRequest, WorkCommit, WorkData, WorkReply, WorkRequest, work_commit,
+    CommitReply, ProgressReply, ProgressRequest, WorkCommit, WorkData, WorkReply, WorkRequest, work_commit,
     work_reply,
 };
 
@@ -43,27 +40,6 @@ fn work_rec_to_work_data(work_rec: database::JobRecord) -> WorkData {
     }
 }
 
-// Shared state
-// #[derive(Clone, Debug)]
-// pub struct ServiceState {
-//     pub db: Arc<redb::Database>,
-//     pub key_found: bool,
-//     pub progress: f64,
-// }
-
-// Background task to update state
-// async fn update_service_state(state: Arc<AsyncRwLock<ServiceState>>) {
-//     loop {
-//         tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
-//         let mut guard = state.write().await;
-//         match database::db_get_progress(&guard.db) {
-//             Ok(p) => {
-//                 guard.progress = p;
-//             },
-//             Err(_) => println!("Error getting progress from DB")
-//         }
-//     }
-// }
 
 // Background task to update progress from DB
 async fn update_service_progress(progress: Arc<AsyncRwLock<f64>>, db: Arc<redb::Database>) {
@@ -91,6 +67,12 @@ pub struct NyashService {
 impl NyashLuks for NyashService {
     async fn request_work(&self, request: Request<WorkRequest>) -> Result<Response<WorkReply>, Status> {
         println!("Got a request: {:?}", request);
+
+
+        if *self.key_found.read().await == true {
+            return Ok(Response::new(WorkReply { result: Some(work_reply::Result::NoWork(true)) }));
+        }
+
         let pref_work_size: u64 = request.into_inner().pref_work_size;
         
         match database::db_create_job(&self.db, pref_work_size) {
@@ -196,7 +178,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     if found_keys.len() >0 {
         println!("Key already found!");
         for key in found_keys {
-            println!("Key found: {:?}", key);
+            println!("Key found! Timestump: {}, Tweak key: {}, Enc key: {}",key.timestump, key.tweak_key, key.enc_key);
         }
         println!("Exit!");
         return Ok(());

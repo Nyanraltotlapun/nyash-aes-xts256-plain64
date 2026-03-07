@@ -4,12 +4,8 @@ use redb::{
     Database, ReadableDatabase, ReadableTable, ReadableTableMetadata, TableDefinition
 };
 // use std::collections::HashMap;
-use std::{ops::Not, path::Path, u64, u128};
+use std::{path::Path, u64, u128};
 
-//tables defenition
-const DB_FILE: &str = "./data";
-
-const COMPLETED_RANGES: TableDefinition<u128, u128> = TableDefinition::new("completed_ranges");
 
 // const RANGE_STATUS: MultimapTableDefinition<bool, u128> =
 //     MultimapTableDefinition::new("range_status");
@@ -183,15 +179,15 @@ impl RangeRecord {
         }
     }
 
-    fn tweaks_left(&self) -> u128 {
-        let t_left = (self.tweak_end - self.tweak_current) + 1;
-        if t_left == 1 && self.key_committed_progress == u128::MAX {
-            0u128
-        }
-        else {
-            t_left
-        }
-    }
+    // fn tweaks_left(&self) -> u128 {
+    //     let t_left = (self.tweak_end - self.tweak_current) + 1;
+    //     if t_left == 1 && self.key_committed_progress == u128::MAX {
+    //         0u128
+    //     }
+    //     else {
+    //         t_left
+    //     }
+    // }
 
     fn completed_ratio(&self) -> f64 {
         let t_left = self.tweak_end - self.tweak_current;
@@ -268,15 +264,15 @@ struct RangesTable<'a> {
 }
 
 impl<'a> RangesTable<'a> {
-    fn new(
-        ranges: redb::Table<'a, u16, (u128, u128, u128, u128)>,
-        ranges_to_use: redb::Table<'a, u16, ()>,
-    ) -> Self {
-        RangesTable {
-            ranges: ranges,
-            ranges_to_use: ranges_to_use,
-        }
-    }
+    // fn new(
+    //     ranges: redb::Table<'a, u16, (u128, u128, u128, u128)>,
+    //     ranges_to_use: redb::Table<'a, u16, ()>,
+    // ) -> Self {
+    //     RangesTable {
+    //         ranges: ranges,
+    //         ranges_to_use: ranges_to_use,
+    //     }
+    // }
 
     fn open_rw(trx: &'a redb::WriteTransaction) -> Result<Self, redb::Error> {
         Ok(RangesTable {
@@ -333,16 +329,16 @@ impl<'a> RangesTable<'a> {
         Ok(())
     }
 
-    fn compute_progress(&self) -> Result<f64, redb::StorageError> {
-        let mut mean_prog: f64 = 0.0;
-        for range_res in self.ranges.iter()? {
-            let ag = range_res?;
-            let range = RangeRecord::from_value(ag.0.value(), &ag.1.value());
-            mean_prog += range.completed_ratio();
-        }
+    // fn compute_progress(&self) -> Result<f64, redb::StorageError> {
+    //     let mut mean_prog: f64 = 0.0;
+    //     for range_res in self.ranges.iter()? {
+    //         let ag = range_res?;
+    //         let range = RangeRecord::from_value(ag.0.value(), &ag.1.value());
+    //         mean_prog += range.completed_ratio();
+    //     }
 
-        Ok(mean_prog / 65536.0f64)
-    }
+    //     Ok(mean_prog / 65536.0f64)
+    // }
 
 }
 
@@ -452,6 +448,7 @@ pub struct FoundKey {
     pub enc_key: u128,
     pub timestump: u64
 }
+
 pub fn db_get_found_keys(db: &Database) -> Result<Vec<FoundKey>, redb::Error> {
     let trx: redb::ReadTransaction = db.begin_read()?;
     let mut res:Vec<FoundKey> = Vec::new();
@@ -477,10 +474,10 @@ pub fn db_put_found_key(db: &Database, tw_k: u128, en_k: u128) -> Result<u64, re
     let trx: redb::WriteTransaction = db.begin_write()?;
     let new_keys_count = {
         let mut found_keys_t = trx.open_table(FOUND_KEYS_TABLE)?;
-        found_keys_t.insert((tw_k,en_k), get_timestump());
+        found_keys_t.insert((tw_k,en_k), get_timestump())?;
         found_keys_t.len()?
     };
-    trx.commit();
+    trx.commit()?;
 
     return Ok(new_keys_count);
 }
