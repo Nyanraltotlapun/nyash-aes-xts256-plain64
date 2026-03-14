@@ -136,7 +136,7 @@ fn list_devices(dev_type: DeviceType) -> Vec<(Device, Platform)> {
         let list_res = Device::list(plt, Some(dev_type));
         match list_res {
             Ok(dev_l) => devices.extend(dev_l.iter().map(|dev| (*dev, plt.clone()))),
-            Err(_) => {}
+            Err(_) => ()
         }
     }
     return devices;
@@ -157,10 +157,15 @@ fn dev_sel_dialog(all_devices: &Vec<(Device, Platform)>) -> Vec<usize> {
 }
 
 pub fn get_devices_conf(file_name: &str) -> Result<(Vec<(Device, Platform)>, AppConfig), String> {
-    let dev_type = dev_type_from_str("ALL").expect("Unexpected device type!");
+    let dev_type = dev_type_from_str("GPU").expect("Unexpected device type!");
 
     // Get devices to be used for key search
-    let all_devices: Vec<(Device, Platform)> = list_devices(dev_type);
+    let mut all_devices: Vec<(Device, Platform)> = list_devices(dev_type);
+    if all_devices.len() == 0 {
+        println!("Cannot detect GPU devices. Will try to list all!");
+        all_devices = list_devices(dev_type_from_str("ALL").expect("Unexpected device type!"));
+    }
+    
     if all_devices.len() == 0 {
         return Err("Cannot find any usable devices.".to_string());
     };
