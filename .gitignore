@@ -23,3 +23,5 @@ target
 # ignore test data
 *.img
 *.key
+
+bin

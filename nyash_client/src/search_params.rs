@@ -1,22 +1,20 @@
-
-
-pub fn get_params() ->([u32; 4],[u32; 4],[u32; 4]) {
+pub fn get_params() -> ([u32; 4], [u32; 4], [u32; 4]) {
     use crate::num_utils;
 
     const ENCRYPTED_DATA: [u8; 16] = [
-            198, 255, 55, 185, 15, 226, 223, 174, 119, 8, 36, 239, 242, 89, 126, 230
+        10, 51, 110, 227, 194, 181, 104, 65, 151, 47, 69, 37, 66, 223, 71, 137,
     ];
 
     const KEY_DATA: [u8; 32] = [
-        206, 193, 83, 54, 46, 234, 185, 41, 146, 244, 130, 6, 212, 68, 106, 162, 165, 97, 188,
-        218, 39, 111, 141, 236, 67, 159, 157, 157, 166, 79, 89, 134
+        206, 193, 83, 54, 46, 234, 185, 41, 146, 244, 130, 6, 212, 68, 106, 162, 165, 97, 188, 218,
+        39, 111, 141, 236, 67, 159, 157, 157, 166, 79, 89, 134,
     ];
 
     // let key_bytes_reversed: Vec<u8> = KEY_DATA.iter().rev().map(|e| *e).collect();
     // let data_bytes_reversed: Vec<u8> = ENCRYPTED_DATA.iter().rev().map(|e| *e).collect();
 
-    let mut tweak_key_b: [u8;16] = [0u8;16];
-    let mut data_key_b: [u8;16] = [0u8;16];
+    let mut tweak_key_b: [u8; 16] = [0u8; 16];
+    let mut data_key_b: [u8; 16] = [0u8; 16];
 
     data_key_b.copy_from_slice(&KEY_DATA[0..16]);
     tweak_key_b.copy_from_slice(&KEY_DATA[16..32]);

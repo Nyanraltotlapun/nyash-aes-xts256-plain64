@@ -135,8 +135,8 @@ fn benchmark(exec_context: &mut ocl_utils::ExecContext) -> (u64, usize) {
         work_time[i] = work_time[i] / 3.0;
         println!("Average time {}", work_time[i]);
         if i > 0 {
-            //giving 5% error for speed mesure
-            if (work_time[i]*1.05) > work_time[i - 1] {
+            //giving 10% error for speed mesure
+            if (work_time[i]*1.1) > work_time[i - 1] {
                 break;
             }
         }

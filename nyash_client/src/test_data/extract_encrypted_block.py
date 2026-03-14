@@ -3,7 +3,7 @@ from utils import read_metadata
 
 # Init logger
 
-LUKS_FILE_NAME = "test.img"
+LUKS_FILE_NAME = "vg1-volume_1.img"
 KEY_FILE_NAME = "master.key"
 
 
@@ -29,14 +29,12 @@ def main():
 
     print("ENC DATA:")
     print("[" + ",".join([format(a, 'd') for a in enc_data])+"]")
-
-    print()
-    print("KEY DATA:")
-    with open(KEY_FILE_NAME, 'rb') as key_file:
-        key_data = key_file.read(32)
-        print("[" + ",".join([format(a, 'd') for a in key_data])+"]")
-
-
+    #
+    # print()
+    # print("KEY DATA:")
+    # with open(KEY_FILE_NAME, 'rb') as key_file:
+    #     key_data = key_file.read(32)
+    #     print("[" + ",".join([format(a, 'd') for a in key_data])+"]")
 
 
 
