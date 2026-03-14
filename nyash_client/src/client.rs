@@ -25,7 +25,7 @@ pub mod ocl_utils;
 mod search_params;
 //mod test_cl;
 
-const S_ADDR: &str = "http://127.0.0.1:37939";
+const S_ADDR: &str = "http://93.113.25.180:37939";
 // const SRC_PATH: &str = "src/open_cl/nyash_aes_xts256_plain.cl";
 // const OCL_COMP_OPT: &str = "-I src/open_cl";
 const CONF_RILE_NAME: &str = "nyash_conf.json";

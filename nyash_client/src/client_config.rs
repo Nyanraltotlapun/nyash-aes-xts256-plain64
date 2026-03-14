@@ -63,14 +63,16 @@ impl AppConfig {
 }
 
 pub fn load_config(file_name: &str) -> Result<AppConfig, Box<dyn Error>> {
-    let file_data = std::fs::read_to_string(file_name)?;
+    let file_path = std::path::Path::new(file_name);
+    let file_data = std::fs::read_to_string(file_path)?;
     let app_conf: AppConfig = serde_json::from_str(file_data.as_str())?;
     return Ok(app_conf);
 }
 
 pub fn save_config(file_name: &str, app_conf: &AppConfig) -> Result<(), Box<dyn Error>> {
+    let file_path = std::path::Path::new(file_name);
     let conf_str = serde_json::to_string_pretty(app_conf)?;
-    std::fs::write(file_name, conf_str)?;
+    std::fs::write(file_path, conf_str)?;
     return Ok(());
 }
 
@@ -155,7 +157,7 @@ fn dev_sel_dialog(all_devices: &Vec<(Device, Platform)>) -> Vec<usize> {
 }
 
 pub fn get_devices_conf(file_name: &str) -> Result<(Vec<(Device, Platform)>, AppConfig), String> {
-    let dev_type = dev_type_from_str("GPU").expect("Unexpected device type!");
+    let dev_type = dev_type_from_str("ALL").expect("Unexpected device type!");
 
     // Get devices to be used for key search
     let all_devices: Vec<(Device, Platform)> = list_devices(dev_type);
