@@ -25,6 +25,31 @@ mod database;
 mod num_utils;
 mod config;
 
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        tokio::signal::ctrl_c()
+            .await
+            .expect("Failed to install Ctrl+C handler");
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+            .expect("Failed to install SIGTERM handler")
+            .recv()
+            .await;
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        _ = ctrl_c => println!("Received Ctrl+C, initiating shutdown"),
+        _ = terminate => println!("Received SIGTERM, initiating shutdown"),
+    }
+}
+
+
 fn work_rec_to_work_data(work_rec: database::JobRecord) -> WorkData {
     let tw_key = num_utils::u128_to_u64arr(work_rec.tweak_key);
     let st_key = num_utils::u128_to_u64arr(work_rec.start_key);
@@ -42,8 +67,8 @@ fn work_rec_to_work_data(work_rec: database::JobRecord) -> WorkData {
 
 
 // Background task to update progress from DB
-async fn update_service_progress(progress: Arc<AsyncRwLock<f64>>, db: Arc<redb::Database>) {
-    loop {
+async fn update_service_progress(progress: Arc<AsyncRwLock<f64>>, db: Arc<redb::Database>, term: Arc<AsyncRwLock<bool>>) {
+    while *term.read().await == false {
         tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
         match database::db_get_progress(&db) {
             Ok(p) => {
@@ -66,7 +91,11 @@ pub struct NyashService {
 #[tonic::async_trait]
 impl NyashLuks for NyashService {
     async fn request_work(&self, request: Request<WorkRequest>) -> Result<Response<WorkReply>, Status> {
-        println!("Got a request: {:?}", request);
+        let rem_addr = match request.remote_addr() {
+            Some(v) => v.to_string(),
+            None => "None".to_string()
+        };
+        println!("Remoute: {}, request_work.", rem_addr);
 
 
         if *self.key_found.read().await == true {
@@ -98,7 +127,12 @@ impl NyashLuks for NyashService {
     }
 
     async fn commit_work(&self, request: Request<WorkCommit>) -> Result<Response<CommitReply>, Status> {
-        println!("Got a request: {:?}", request);
+        let rem_addr = match request.remote_addr() {
+            Some(v) => v.to_string(),
+            None => "None".to_string()
+        };
+        println!("Remoute: {}, commit_work.", rem_addr);
+
         let work_commit = request.into_inner();
 
         let put_k_no_err: bool = match work_commit.result {
@@ -133,7 +167,12 @@ impl NyashLuks for NyashService {
         }
     }
 
-    async fn request_progress(&self, _request: Request<ProgressRequest>) -> Result<Response<ProgressReply>, Status> {
+    async fn request_progress(&self, request: Request<ProgressRequest>) -> Result<Response<ProgressReply>, Status> {
+        let rem_addr = match request.remote_addr() {
+            Some(v) => v.to_string(),
+            None => "None".to_string()
+        };
+        println!("Remoute: {}, request_progress.", rem_addr);
         Ok(Response::new(ProgressReply {
             key_found: *self.key_found.read().await,
             progress: *self.progress.read().await,
@@ -153,7 +192,7 @@ struct ProgArgs {
 
 
 
-#[tokio::main]
+#[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let args = ProgArgs::parse();
@@ -165,7 +204,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let db_file = format!("{}data.rdb",db_dir);
     let db_path = PathBuf::from_str(db_file.as_str()).unwrap();
     
-    let db = database::db_open(&db_path).expect("Error Opening database");
+    let mut db = database::db_open(&db_path).expect("Error Opening database");
+    println!("Compact db");
+    db.compact()?;
 
     // Get the address to bind to
     let addr = format!("{}:{}",server_config.bind_addr, server_config.listen_port);
@@ -190,22 +231,33 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let shared_progress = Arc::new(AsyncRwLock::new(progress));
     let shared_db = Arc::new(db);
     let shared_key_found = Arc::new(AsyncRwLock::new(false));
-
+    let shared_termination: Arc<AsyncRwLock<bool>> = Arc::new(AsyncRwLock::new(false));
     // let service_state = Arc::new(AsyncRwLock::new(ServiceState {
     //     db: Arc::new(db),
     //     key_found: false,
     //     progress: progress,
     // }));
 
+    let term_clone = shared_termination.clone();
+    let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel();
+    tokio::spawn(async move {
+        shutdown_signal().await;
+        //signaling that we should stop
+        let mut guard = term_clone.write().await;
+        *guard = true;
+        let _ = shutdown_tx.send(());
+    });
+
     // Spawn the periodic updater
-    tokio::spawn(update_service_progress(shared_progress.clone(), shared_db.clone()));
+    tokio::spawn(update_service_progress(shared_progress.clone(), shared_db.clone(), shared_termination.clone()));
     
     let nyash_service = NyashService{db:shared_db, progress:shared_progress, key_found:shared_key_found};
 
 
     Server::builder()
         .add_service(NyashLuksServer::new(nyash_service))
-        .serve(addr)
+        .serve_with_shutdown(addr, async { shutdown_rx.await.ok(); })
         .await?;
+    
     Ok(())
 }

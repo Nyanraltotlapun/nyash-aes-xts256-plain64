@@ -10,7 +10,7 @@ use std::{path::Path, u64, u128};
 // const RANGE_STATUS: MultimapTableDefinition<bool, u128> =
 //     MultimapTableDefinition::new("range_status");
 
-const JOBS_TABLE: TableDefinition<u64, (u16, u128, u128, u64, u64)> = TableDefinition::new("jobs");
+const JOBS_TABLE: TableDefinition<u64, (u32, u128, u128, u64, u64)> = TableDefinition::new("jobs");
 const JOBS_FREE_IDS: TableDefinition<u64, ()> = TableDefinition::new("jobs_free_ids");
 
 const FOUND_KEYS_TABLE: TableDefinition<(u128, u128), u64> = TableDefinition::new("found_keys");
@@ -24,7 +24,7 @@ fn get_timestump() -> u64 {
 #[derive(Copy, Clone, Debug)]
 pub struct JobRecord {
     pub id: u64,
-    pub range_id: u16,
+    pub range_id: u32,
     pub tweak_key: u128,
     pub start_key: u128,
     pub len: u64,
@@ -32,7 +32,7 @@ pub struct JobRecord {
 }
 
 impl JobRecord {
-    pub fn from_data(k: u64, v: &(u16, u128, u128, u64, u64)) -> Self {
+    pub fn from_data(k: u64, v: &(u32, u128, u128, u64, u64)) -> Self {
         Self {
             id: k,
             range_id: v.0,
@@ -47,7 +47,7 @@ impl JobRecord {
         item: Result<
             (
                 redb::AccessGuard<'_, u64>,
-                redb::AccessGuard<'_, (u16, u128, u128, u64, u64)>,
+                redb::AccessGuard<'_, (u32, u128, u128, u64, u64)>,
             ),
             redb::StorageError,
         >,
@@ -56,7 +56,7 @@ impl JobRecord {
         Ok(Self::from_data(ag.0.value(), &ag.1.value()))
     }
 
-    pub fn get_value(&self) -> (u16, u128, u128, u64, u64) {
+    pub fn get_value(&self) -> (u32, u128, u128, u64, u64) {
         return (
             self.range_id,
             self.tweak_key,
@@ -69,7 +69,7 @@ impl JobRecord {
     // search for abandoned job
     // returns first job older than 3 hours
     pub fn get_staled_job(
-        jobs_table: &mut redb::Table<'_, u64, (u16, u128, u128, u64, u64)>,
+        jobs_table: &mut redb::Table<'_, u64, (u32, u128, u128, u64, u64)>,
         timeout: u64,
     ) -> Result<Option<JobRecord>, redb::Error> {
         let current_time = get_timestump();
@@ -103,7 +103,7 @@ impl JobRecord {
     // What we want is to check max and min ids
     // and return id lower than min or grater than max
     fn get_new_job_id(
-        jobs_table: &redb::Table<'_, u64, (u16, u128, u128, u64, u64)>,
+        jobs_table: &redb::Table<'_, u64, (u32, u128, u128, u64, u64)>,
     ) -> Result<u64, redb::Error> {
         // If table is empty return 0 ID
         if jobs_table.len()? == 0 {
@@ -132,9 +132,9 @@ impl JobRecord {
     }
 }
 
-const RANGES: TableDefinition<u16, (u128, u128, u128, u128)> = TableDefinition::new("ranges");
-const RANGES_TO_USE: TableDefinition<u16, ()> = TableDefinition::new("ranges_to_use");
-
+const RANGES: TableDefinition<u32, (u128, u128, u128, u128)> = TableDefinition::new("ranges");
+const RANGES_TO_USE: TableDefinition<u32, ()> = TableDefinition::new("ranges_to_use");
+ 
 // to not owerflow u128 we calculate it in range 0..max and then substruct
 // const SUB_DIV: u128 = 0x1000100010001000100010001;
 // TWEAKS_PER_RANGE: u128 = 5192296858534827628530496329220096
@@ -147,7 +147,7 @@ const TWEAKS_PER_RANGE_ID_VICE: u128 = TWEAKS_PER_RANGE - 1;
 
 #[derive(Copy, Clone, Debug)]
 struct RangeRecord {
-    id: u16,
+    id: u32,
 
     tweak_current: u128,
     tweak_end: u128,
@@ -157,7 +157,7 @@ struct RangeRecord {
 
 impl RangeRecord {
 
-    fn from_value(k: u16, v: &(u128, u128, u128, u128)) -> Self {
+    fn from_value(k: u32, v: &(u128, u128, u128, u128)) -> Self {
         Self {
             id: k,
             tweak_current: v.0,
@@ -167,7 +167,7 @@ impl RangeRecord {
         }
     }
 
-    fn new(id: u16) -> Self {
+    fn new(id: u32) -> Self {
 
         let tweak_start: u128 = id as u128 * TWEAKS_PER_RANGE;
         Self {
@@ -259,8 +259,8 @@ impl RangeRecord {
 
 #[derive(Debug)]
 struct RangesTable<'a> {
-    ranges: redb::Table<'a, u16, (u128, u128, u128, u128)>,
-    ranges_to_use: redb::Table<'a, u16, ()>,
+    ranges: redb::Table<'a, u32, (u128, u128, u128, u128)>,
+    ranges_to_use: redb::Table<'a, u32, ()>,
 }
 
 impl<'a> RangesTable<'a> {
@@ -281,7 +281,7 @@ impl<'a> RangesTable<'a> {
         })
     }
 
-    fn get_range(&self, k: u16) -> Result<Option<RangeRecord>, redb::Error> {
+    fn get_range(&self, k: u32) -> Result<Option<RangeRecord>, redb::Error> {
         Ok(self
             .ranges
             .get(k)?
@@ -501,30 +501,43 @@ pub fn db_get_progress(db: &Database) -> Result<f64, redb::Error> {
 
 
 fn db_init(db: &Database) -> Result<(), redb::Error> {
-    let transct: redb::WriteTransaction = db.begin_write()?;
+    println!("Start DB init.");
+    
+    let trx: redb::WriteTransaction = db.begin_write()?;
     {
-        let mut ranges = transct.open_table(RANGES)?;
-        let mut ranges_to_use = transct.open_table(RANGES_TO_USE)?;
-
-        // create new ranges
-        for r_id in 0..=u16::MAX {
-            let r = RangeRecord::new(r_id);
-            ranges.insert(r_id, r.value())?;
-            ranges_to_use.insert(r_id, ())?;
+        let mut ranges = trx.open_table(RANGES)?;
+        let mut ranges_to_use = trx.open_table(RANGES_TO_USE)?;
+        for k in 0..=u16::MAX {
+            // create new ranges
+            let r = RangeRecord::new(k as u32);
+            ranges.insert(k as u32, r.value())?;
+            ranges_to_use.insert(k as u32, ())?;
         }
+
+        println!("ensure that all tables is created");
+        // ensure that all tables is created
+        trx.open_table(FOUND_KEYS_TABLE)?.len()?;
+        trx.open_table(JOBS_TABLE)?.len()?;
+        trx.open_table(JOBS_FREE_IDS)?.len()?;
     }
-    transct.commit()?;
+    println!("Commit transaction");
+    trx.commit()?;
+    println!("Done!");
+    
     Ok(())
 }
 
 pub fn db_open(db_file_path: &Path) -> Result<Database, redb::Error> {
     let db = Database::create(db_file_path)?;
-    let trx = db.begin_read()?;
+    let trx = db.begin_write()?;
     let ranges_len = {
+        println!("Opening RANGES to get len");
         let ranges_table = trx.open_table(RANGES)?;
+        println!("Try to get len");
         ranges_table.len()?
     };
-    trx.close()?;
+    println!("Commit transaction");
+    trx.commit()?;
     if ranges_len == 0 {
         db_init(&db)?;
     }

@@ -1,0 +1,12 @@
+{
+  "devices": [
+    {
+      "dev_name": "gfx1103",
+      "platform_name": "AMD Accelerated Parallel Processing",
+      "id": 0,
+      "work_size": 4096,
+      "batch_size": 5412812
+    }
+  ],
+  "dev_fill": 100
+}

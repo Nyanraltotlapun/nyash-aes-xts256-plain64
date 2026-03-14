@@ -12,32 +12,7 @@ use crate::client_config::{AppConfig, DevConf};
 
 mod client_config;
 mod num_utils;
-/// Exploded version. Boom!
-///
-/// The functions above use `ProQue` and other abstractions to greatly reduce
-/// the amount of boilerplate and configuration necessary to do basic work.
-/// Many tasks, however, will require more configuration and will necessitate
-/// doing away with `ProQue` altogether. Enqueuing kernels and reading/writing
-/// from buffers and images usually requires a more explicit interface.
-///
-/// The following function performs the exact same steps that the above
-/// functions did, with many of the convenience abstractions peeled away.
-///
-/// See the function below this to take things a step deeper...
-///
-// trait FromStr {
-//     fn from_str(&self);
-// }
-// // Define a trait with a constructor method
-// trait NewFile {
-//     fn new<P: AsRef<Path>>(path: P) -> std::io::Result<Self> where Self: Sized;
-// }
 
-// impl Foo for ocl::flags::DeviceType {
-//     fn foo(&self) {
-//         println!("foo");
-//     }
-// }
 
 fn dev_type_from_str(s: &str) -> Result<flags::DeviceType, ()> {
     match s {

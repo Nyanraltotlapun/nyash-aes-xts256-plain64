@@ -32,15 +32,25 @@
 // g_key_found uint[9] - 0 element - flag that sets to 1 if key found.
 // Other 8 elements is found key
 
-__kernel void search_key(const uint batch_size, const ulong g_Ti, const uint g_Tj, 
-                              __global const uint8* g_start_enc_key,
+
+// in current implementation tweak key is not changing by kernel
+// So changing it a bit
+
+// g_params[uint4]
+// g_params[0] -   batch_size
+// g_params[1-2] - ulong g_Ti
+// g_params[3] -   g_Tj
+__kernel void search_key(__global const uint* g_tweak_params, 
+                              __global const ulong* g_batch_size,
+                              __global const uint4* g_start_enc_key,
+                              __global const uint4* g_tweak_key,
                               __global const uint4* g_uenc_data,
                               __global const uint4* g_target_data,
                               __global uint* g_key_found)
 {
   const uint g_id = get_global_id(0);
 
-  uint enc_key[8];
+  uint enc_key[4];
   uint tweak[4];
   uint uenc_data[4];
   uint4 target_data = *g_target_data;
@@ -48,32 +58,34 @@ __kernel void search_key(const uint batch_size, const ulong g_Ti, const uint g_T
   uint d_ks[44]; // data expanded key
   uint t_ks[44]; // tweak expanded key
 
+  //set batch_size
+  ulong batch_size = g_batch_size[0];
+
   // set disk sector number
   uint sec_n[4] = {0};
-  sec_n[0] = ((uint*)&g_Ti)[0];
-  sec_n[1] = ((uint*)&g_Ti)[1];
+  sec_n[0] = g_tweak_params[0];
+  sec_n[1] = g_tweak_params[1];
 
-  uint Tj = g_Tj; // AES block number
+  uint Tj = g_tweak_params[2]; // AES block number
 
   vstore4(*g_uenc_data, 0, uenc_data);
-  vstore8(*g_start_enc_key, 0, enc_key);
-
+  vstore4(*g_start_enc_key, 0, enc_key);
+  vstore4(*g_tweak_key, 0, tweak);
 
   // Set initial start key for every work thread
   uint k_data_carry = add_uint_to_bigint4_ (enc_key, (g_id*batch_size));
-  // uint k_tweak_carry = add_uint_to_bigint4_ (&enc_key[4], k_data_carry);
-  // No need to store tweak carry
-  if (add_uint_to_bigint4_ (&enc_key[4], k_data_carry) != 0u) return; // if reached max key value exit thread
+  if (k_data_carry != 0u) return; // if reached max key value exit thread
 
   // Generate tweak
-  aes128_set_encrypt_key (t_ks, &enc_key[4]);
+  aes128_set_encrypt_key (t_ks, tweak);
   aes_xts256_gen_tweak (t_ks, sec_n, Tj, tweak);
+  //if (g_id == 0) g_key_found[1] = 1;
 
-  for (uint batch_id = 0u; (batch_id < batch_size); batch_id++)
+  for (ulong batch_id = 0ul; batch_id < batch_size; batch_id++)
   {
-    // Data encrypt key always changing because we increment from 0 index to 8
+    //if (g_id == 0) g_key_found[1] = 2;
+    // Set encrypt key
     aes128_set_encrypt_key (d_ks, enc_key);
-
     // encrypt data
     aes_xts256_enc_block (d_ks, tweak, uenc_data, (uint*)&enc_data);
 
@@ -81,29 +93,17 @@ __kernel void search_key(const uint batch_size, const ulong g_Ti, const uint g_T
     if (all(enc_data==target_data)) 
     {
       g_key_found[0] = 1;
-      vstore8(vload8(0, enc_key), 0, &g_key_found[1]);
+      g_key_found[1] = enc_key[0];
+      g_key_found[2] = enc_key[1];
+      g_key_found[3] = enc_key[2];
+      g_key_found[4] = enc_key[3];
       return;
     }
 
-    // Increment data key part by 1.
+    // Increment data key by 1.
     k_data_carry = add_one_to_bigint4_ (enc_key);
-
-    // Tweak changes only once in 2^128 times
-    if (k_data_carry != 0u) {
-
-      // Increment tweak part
-      // k_tweak_carry = add_one_to_bigint4_ (&enc_key[4]);
-      add_one_to_bigint4_ (&enc_key[4]); // no need to store tweak carry
-
-      // *** I commented next line because, its a really!! lol! rare event,
-      // *** and in a worse case we just do a bit of noneed work.
-      // *** But additional check on every itaration actually mesurable cost.
-      // if (k_tweak_carry != 0u) return; // if reached max key value exit thread
-
-      // Gen new tweak
-      aes128_set_encrypt_key (t_ks, &enc_key[4]);
-      aes_xts256_gen_tweak (t_ks, sec_n, Tj, tweak);
-    }
+    // if reached max key value exit thread
+    if (k_data_carry != 0u) return; 
   }
 }
 
