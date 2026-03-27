@@ -113,15 +113,15 @@ fn benchmark(exec_context: &mut ocl_utils::ExecContext) -> (u64, usize) {
         work_size: 128,
     };
 
-    let total_work: u64 = 1280000000;
-    let work_sizes: [usize; 8] = [128, 256, 512, 1024, 2048, 4096, 8192, 16384];
-    let mut work_time = [0f64; 8];
+    let total_work: u64 = 128000000;
+    let work_sizes: [usize; 9] = [64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384];
+    let mut work_time = [0f64; 9];
 
     ocl_utils::set_target_data(exec_context, &mut nyan_exec_dat).expect("Error set target data!");
 
     let mut preffered_work_size: usize = work_sizes[0];
     let mut preffered_batch_size: u64 = 0;
-    for i in 0..8 {
+    for i in 0..9 {
         let test_work_s = work_sizes[i];
         let batch_size: u64 = total_work / test_work_s as u64;
         nyan_exec_dat.work_size = test_work_s;
@@ -202,7 +202,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         nyash_dev_cfg.work_size, nyash_dev_cfg.batch_size
     );
 
-    let (_, _, encrypted_data) = search_params::get_params();
+    let encrypted_data = search_params::get_params();
     //setting data
     let mut nyan_exec_dat = ocl_utils::ExecData {
         start_key: Vec::new(),
