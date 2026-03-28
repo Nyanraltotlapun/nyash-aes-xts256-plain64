@@ -23,4 +23,4 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-apple-darwin
-      - run: cargo build --target aarch64-apple-darwin --release
+      - run: cargo build --manifest-path nyash_client/Cargo.toml --target aarch64-apple-darwin --release
