@@ -32,4 +32,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: m1-binary
-          path: nyash_client/target/aarch64-apple-darwin/release/nyash_client
+          path: target/aarch64-apple-darwin/release/nyash_client
