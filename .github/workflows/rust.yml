@@ -1,0 +1,26 @@
+name: Rust
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Build configuration'
+        required: true
+        default: 'release'
+        type: choice
+        options:
+          - debug
+          - release
+          
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-m1:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
+      - run: cargo build --target aarch64-apple-darwin --release
