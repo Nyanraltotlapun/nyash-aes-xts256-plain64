@@ -27,3 +27,9 @@ jobs:
         with:
           targets: aarch64-apple-darwin
       - run: cargo build --manifest-path nyash_client/Cargo.toml --target aarch64-apple-darwin --release
+
+      - name: Upload Binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: m1-binary
+          path: nyash_client/target/aarch64-apple-darwin/release/nyash_client
