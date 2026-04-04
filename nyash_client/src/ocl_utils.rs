@@ -7,7 +7,7 @@ use crate::num_utils;
 
 pub struct CtxBuffers {
     tweak_params: Buffer<u32>,
-    batch_size: Buffer<u64>,
+    batch_size: Buffer<u32>,
     start_key: Buffer<u32>,
     tweak_key: Buffer<u32>,
     uenc_data: Buffer<u32>,
@@ -23,7 +23,7 @@ pub struct ExecData {
     pub tweak_i: u64,
     pub tweak_j: u32,
     pub key_found: Vec<u32>,
-    pub batch_size: u64,
+    pub batch_size: u32,
     pub work_size: usize,
 }
  impl ExecData {
@@ -99,11 +99,11 @@ pub fn init_buffers(cl_queue: &Queue) -> Result<CtxBuffers, ocl::Error> {
         .fill_val(0u32)
         .build()?;
 
-    let cl_buffer_batch_size = Buffer::<u64>::builder()
+    let cl_buffer_batch_size = Buffer::<u32>::builder()
         .queue(cl_queue.clone())
         .flags(flags::MEM_READ_ONLY)
         .len(1)
-        .fill_val(0u64)
+        .fill_val(0u32)
         .build()?;
 
     let cl_buffer_start_key = Buffer::<u32>::builder()
@@ -201,6 +201,16 @@ impl ExecContext {
             buffers: nya_cl_buffers,
         })
     }
+
+    pub fn reinit_kernel(&mut self, global_work_size: usize) -> Result<(), ocl::Error> {
+        self.kernel = init_kernel(
+            global_work_size,
+            &self._prog,
+            &self.queue,
+            &self.buffers,
+        )?;
+        Ok(())
+    }
 }
 
 pub fn set_target_data(ex_ctx: &mut ExecContext, ex_data: &mut ExecData) -> Result<(), ocl::Error> {
@@ -235,7 +245,7 @@ pub fn set_target_data(ex_ctx: &mut ExecContext, ex_data: &mut ExecData) -> Resu
         .write(&ex_data.target_data)
         .enq()?;
 
-    ex_ctx.queue.finish()?;
+    //ex_ctx.queue.finish()?;
 
     return Ok(());
 }
@@ -246,6 +256,7 @@ pub fn do_work(ex_ctx: &mut ExecContext, ex_data: &mut ExecData) -> Result<(bool
 
     let start_time = std::time::Instant::now();
 
+    //println!("Copy batch_size buffer...");
     // tranfer batch_size
     ex_ctx
         .buffers
@@ -257,6 +268,7 @@ pub fn do_work(ex_ctx: &mut ExecContext, ex_data: &mut ExecData) -> Result<(bool
         .enq()?;
 
 
+    //println!("Copy start_key buffer...");
     // transfer start key to device
     ex_ctx
         .buffers
@@ -267,6 +279,7 @@ pub fn do_work(ex_ctx: &mut ExecContext, ex_data: &mut ExecData) -> Result<(bool
         .write(&ex_data.start_key)
         .enq()?;
 
+    //println!("Copy tweak_key buffer...");
     // transfet tweak key
     ex_ctx
         .buffers
@@ -287,7 +300,9 @@ pub fn do_work(ex_ctx: &mut ExecContext, ex_data: &mut ExecData) -> Result<(bool
     //     .fill(0u32, None)
     //     .enq()?;
 
-    
+    //println!("Copy data to GPU...");
+    //ex_ctx.queue.finish()?;
+    //println!("Run kernel...");
     // (4) Run the kernel
     unsafe {
         ex_ctx
@@ -298,6 +313,10 @@ pub fn do_work(ex_ctx: &mut ExecContext, ex_data: &mut ExecData) -> Result<(bool
             .enq()?;
     }
 
+    //println!("Waiting for kernel to finish work...");
+    //ex_ctx.queue.finish()?;
+
+    //println!("Copy data back from GPU...");
     // read key_foun buffer
     ex_ctx
         .buffers
@@ -307,6 +326,9 @@ pub fn do_work(ex_ctx: &mut ExecContext, ex_data: &mut ExecData) -> Result<(bool
         .offset(0)
         .read(&mut ex_data.key_found)
         .enq()?;
+
+    //println!("Copy results back...");
+    //ex_ctx.queue.finish()?;
 
     let exec_duration = start_time.elapsed().as_secs_f64();
 

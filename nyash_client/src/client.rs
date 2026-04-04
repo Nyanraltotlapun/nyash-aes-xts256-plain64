@@ -100,7 +100,7 @@ async fn commit_work(
     return Ok(response.into_inner());
 }
 
-fn benchmark(exec_context: &mut ocl_utils::ExecContext) -> (u64, usize) {
+fn benchmark(exec_context: &mut ocl_utils::ExecContext) -> (u32, usize) {
     let mut nyan_exec_dat = ocl_utils::ExecData {
         start_key: vec![1u32; 4],
         tweak_key: vec![2u32; 4],
@@ -114,20 +114,22 @@ fn benchmark(exec_context: &mut ocl_utils::ExecContext) -> (u64, usize) {
     };
 
     let total_work: u64 = 128000000;
-    let work_sizes: [usize; 9] = [64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384];
-    let mut work_time = [0f64; 9];
+    let work_sizes: [usize; 8] = [128, 256, 512, 1024, 2048, 4096, 8192, 16384];
+    let mut work_time = [0f64; 8];
 
     ocl_utils::set_target_data(exec_context, &mut nyan_exec_dat).expect("Error set target data!");
 
     let mut preffered_work_size: usize = work_sizes[0];
-    let mut preffered_batch_size: u64 = 0;
-    for i in 0..9 {
+    let mut preffered_batch_size: u32 = 0;
+    for i in 0..8 {
         let test_work_s = work_sizes[i];
-        let batch_size: u64 = total_work / test_work_s as u64;
+        let batch_size: u32 = (total_work / test_work_s as u64) as u32;
         nyan_exec_dat.work_size = test_work_s;
         nyan_exec_dat.batch_size = batch_size;
         println!("Benchmarking work size {}", test_work_s);
         for _j in 0..3 {
+            println!("Run number {}", _j);
+            //exec_context.reinit_kernel(test_work_s).expect("Error reinit kernel!");
             let (_, exec_time) =
                 ocl_utils::do_work(exec_context, &mut nyan_exec_dat).expect("Error running tests!");
             work_time[i] += exec_time;
@@ -142,7 +144,8 @@ fn benchmark(exec_context: &mut ocl_utils::ExecContext) -> (u64, usize) {
         }
         preffered_work_size = work_sizes[i];
         // calculate batch size so it correspond to 30 sec job
-        preffered_batch_size = (batch_size as f64 * (20.0 / work_time[i])) as u64;
+        let p_b_u64 = (batch_size as f64 * (10.0 / work_time[i])) as u64;
+        preffered_batch_size = p_b_u64.min(u32::MAX as u64) as u32;
         println!("batch_size {}, work_time {}, preffered_batch_size {}, preffered_work_size {}",
         batch_size,
         work_time[i],
@@ -290,7 +293,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ]))
         .to_vec();
 
-        let mut batch_size = work_data.work_size / nyan_exec_dat.work_size as u64;
+        let bs_u64 = work_data.work_size / nyan_exec_dat.work_size as u64;
+        let mut batch_size = bs_u64.min(u32::MAX as u64) as u32;
         if (work_data.work_size % nyan_exec_dat.work_size as u64) != 0 {
             batch_size += 1;
         }
@@ -298,6 +302,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         nyan_exec_dat.batch_size = batch_size;
 
         println!("Crunching numbers...");
+        //exec_context.reinit_kernel(nyan_exec_dat.work_size).expect("Error reinit kernel!");
         match ocl_utils::do_work(&mut exec_context, &mut nyan_exec_dat) {
             Err(_) => println!("Error doing work!"),
             Ok((k_f, work_time)) => {
@@ -308,8 +313,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 let g_k_p_s = (work_data.work_size as f64 / work_time) / 1000000000.0;
                 if giga_keys_per_second != 0f64 {
-                    giga_keys_per_second -= giga_keys_per_second / 10.0;
-                    giga_keys_per_second += g_k_p_s / 10.0;
+                    giga_keys_per_second = giga_keys_per_second*0.9 + g_k_p_s*0.1;
                 } else {
                     giga_keys_per_second = g_k_p_s;
                 }

@@ -22,6 +22,3 @@ __kernel void test_add(__global const uint* g_num_to_add,
 
 }
 
-
-
-

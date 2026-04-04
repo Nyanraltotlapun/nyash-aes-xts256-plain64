@@ -41,7 +41,7 @@
 // g_params[1-2] - ulong g_Ti
 // g_params[3] -   g_Tj
 __kernel void search_key(__global const uint* g_tweak_params, 
-                              __global const ulong* g_batch_size,
+                              __global const uint* g_batch_size,
                               __global const uint4* g_start_enc_key,
                               __global const uint4* g_tweak_key,
                               __global const uint4* g_uenc_data,
@@ -59,7 +59,7 @@ __kernel void search_key(__global const uint* g_tweak_params,
   uint t_ks[44]; // tweak expanded key
 
   //set batch_size
-  ulong batch_size = g_batch_size[0];
+  uint batch_size = g_batch_size[0];
 
   // set disk sector number
   uint sec_n[4] = {0};
@@ -73,7 +73,8 @@ __kernel void search_key(__global const uint* g_tweak_params,
   vstore4(*g_tweak_key, 0, tweak);
 
   // Set initial start key for every work thread
-  uint k_data_carry = add_uint_to_bigint4_ (enc_key, (g_id*batch_size));
+  ulong th_shift = (ulong)g_id * (ulong)batch_size;
+  uint k_data_carry = add_ulong_to_bigint4_ (enc_key, th_shift);
   if (k_data_carry != 0u) return; // if reached max key value exit thread
 
   // Generate tweak
@@ -81,7 +82,7 @@ __kernel void search_key(__global const uint* g_tweak_params,
   aes_xts256_gen_tweak (t_ks, sec_n, Tj, tweak);
   //if (g_id == 0) g_key_found[1] = 1;
 
-  for (ulong batch_id = 0ul; batch_id < batch_size; batch_id++)
+  for (uint batch_id = 0u; batch_id < batch_size; batch_id++)
   {
     //if (g_id == 0) g_key_found[1] = 2;
     // Set encrypt key

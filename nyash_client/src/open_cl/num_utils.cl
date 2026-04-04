@@ -45,6 +45,25 @@ inline uint add_one_to_bigint4_(uint *_n)
   return t.i[1];
 }
 
+inline uint add_ulong_to_bigint4_ (uint* _n, const ulong b)
+{
+  ul_ui_union bu = {b};
+  ul_ui_union t;
+  t.l = (ulong)_n[0] + (ulong)bu.i[0];
+  _n[0] = t.i[0];
+
+  t.l = (ulong)t.i[1] + (ulong)_n[1] + (ulong)bu.i[1];
+  _n[1] = t.i[0];
+
+  t.l = (ulong)_n[2] + (ulong)t.i[1];
+  _n[2] = t.i[0];
+  
+  t.l = (ulong)_n[3] + (ulong)t.i[1];
+  _n[3] = t.i[0];
+
+  return t.i[1];
+}
+
 inline uint add_uint_to_bigint4_ (uint* _n, const uint b)
 {
   ul_ui_union t;

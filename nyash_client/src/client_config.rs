@@ -10,7 +10,7 @@ pub struct DevConf {
     pub platform_name: String,
     pub id: usize,
     pub work_size: usize,
-    pub batch_size: u64,
+    pub batch_size: u32,
 }
 
 impl DevConf {
