@@ -1,0 +1,35 @@
+name: Rust
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Build configuration'
+        required: true
+        default: 'release'
+        type: choice
+        options:
+          - debug
+          - release
+          
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-m1:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
+      - run: cargo build --manifest-path nyash_client/Cargo.toml --target aarch64-apple-darwin --release
+
+      - name: Upload Binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: m1-binary
+          path: nyash_client/target/aarch64-apple-darwin/release/nyash-client
