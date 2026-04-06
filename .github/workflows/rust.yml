@@ -16,7 +16,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  - build-m1:
+  build-m1:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -34,7 +34,7 @@ jobs:
           name: nyash-client-aarch64-apple-darwin
           path: nyash_client/target/aarch64-apple-darwin/release/nyash-client
 
-  - build-freebsd:
+  build-freebsd:
     name: Release - FreeBSD-x86_64
     strategy:
       matrix:
