@@ -5,7 +5,7 @@ edition = "2024"
 
 
 [[bin]] # Bin to run the HelloWorld gRPC server
-name = "nyash_server"
+name = "nyash-server"
 path = "src/server.rs"
 
 

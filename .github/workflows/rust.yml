@@ -16,7 +16,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build-m1:
+  - build-m1:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -31,5 +31,31 @@ jobs:
       - name: Upload Binary
         uses: actions/upload-artifact@v4
         with:
-          name: m1-binary
+          name: nyash-client-aarch64-apple-darwin
           path: nyash_client/target/aarch64-apple-darwin/release/nyash-client
+
+  - build-freebsd:
+    name: Release - FreeBSD-x86_64
+    strategy:
+      matrix:
+        platform:
+          - os-name: FreeBSD-x86_64
+            runs-on: ubuntu-24.04
+            target: x86_64-unknown-freebsd
+    runs-on: ${{ matrix.platform.runs-on }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Build binary
+        uses: houseabsolute/actions-rust-cross@v1
+        with:
+          command: build
+          target: ${{ matrix.platform.target }}
+          args: "---manifest-path nyash_server/Cargo.toml -locked --release"
+          strip: true
+
+      - name: Upload Server Binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: nyash-server-x86_64-unknown-freebsd
+          path: nyash_server/target/x86_64-unknown-freebsd/release/nyash-server
