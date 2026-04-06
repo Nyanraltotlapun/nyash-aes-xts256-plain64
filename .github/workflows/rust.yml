@@ -50,9 +50,10 @@ jobs:
         uses: houseabsolute/actions-rust-cross@v1
         with:
           command: build
-          target: ${{ matrix.platform.target }}
-          args: "---manifest-path nyash_server/Cargo.toml -locked --release"
+          target: x86_64-unknown-freebsd
+          args: "--locked --release --manifest-path nyash_server/Cargo.toml"
           strip: true
+          name: Build binary
 
       - name: Upload Server Binary
         uses: actions/upload-artifact@v4
