@@ -1,0 +1,31 @@
+[package]
+name = "nyash_client"
+version = "0.2.0"
+edition = "2024"
+build = "build.rs"
+
+[[bin]] # Bin to run the HelloWorld gRPC client
+name = "nyash-client"
+path = "src/client.rs"
+
+[dependencies]
+aes = { version = "0.9" }
+prost = "0.14.3"
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.149"
+threadpool = "1.8.1"
+tokio = { version = "1.50.0", features = ["rt", "macros", "signal"] }
+tonic = "0.14.5"
+tonic-prost = "0.14.5"
+
+[build-dependencies]
+tonic-prost-build = "0.14.5"
+
+
+[profile.release]
+lto = true
+codegen-units = 1
+opt-level = 3
+strip = true
+
+
